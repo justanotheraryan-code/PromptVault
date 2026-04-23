@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { usePrompts } from './hooks/usePrompts'
 import Header from './components/Header'
 import SearchBar from './components/SearchBar'
@@ -9,13 +9,29 @@ import AddEditPanel from './components/AddEditPanel'
 import ImportExportBar from './components/ImportExportBar'
 import './styles.css'
 
+function getInitialTheme() {
+  const saved = localStorage.getItem('promptvault_theme')
+  if (saved === 'dark' || saved === 'light') return saved
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+}
+
 export default function App() {
   const vault = usePrompts()
+  const [theme, setTheme] = useState(getInitialTheme)
   const [showPanel, setShowPanel] = useState(false)
   const [editingPrompt, setEditingPrompt] = useState(null)
   const [statusMessage, setStatusMessage] = useState(null)
   const [statusType, setStatusType] = useState('default')
   const statusTimerRef = useRef(null)
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+    localStorage.setItem('promptvault_theme', theme)
+  }, [theme])
+
+  function toggleTheme() {
+    setTheme((t) => (t === 'dark' ? 'light' : 'dark'))
+  }
 
   function showStatus(msg, type = 'default') {
     setStatusMessage(msg)
@@ -39,10 +55,10 @@ export default function App() {
   function handleSave(fields) {
     if (editingPrompt) {
       vault.updatePrompt(editingPrompt.id, fields)
-      showStatus('> PROMPT UPDATED. VAULT SYNCED.')
+      showStatus('Prompt updated')
     } else {
       vault.addPrompt(fields)
-      showStatus('> PROMPT SAVED. VAULT UPDATED.')
+      showStatus('Prompt saved')
     }
     setShowPanel(false)
     setEditingPrompt(null)
@@ -61,27 +77,33 @@ export default function App() {
 
   function handleDelete(id) {
     vault.deletePrompt(id)
-    showStatus('> PROMPT DELETED.')
+    showStatus('Prompt deleted')
   }
 
   async function handleImport(file) {
     const result = await vault.importJSON(file)
     if (result.success) {
-      showStatus(`> IMPORTED ${result.added} PROMPT${result.added !== 1 ? 'S' : ''}. VAULT UPDATED.`)
+      showStatus(`Imported ${result.added} prompt${result.added !== 1 ? 's' : ''}`)
     } else {
-      showStatus('> ERROR: INVALID FILE FORMAT.', 'error')
+      showStatus('Invalid file format', 'error')
     }
   }
 
-  const statusClass = statusType === 'error'
-    ? 'status-line status-line--error'
-    : statusType === 'warn'
-    ? 'status-line status-line--warn'
-    : 'status-line'
+  const statusClass =
+    statusType === 'error'
+      ? 'status-line status-line--error'
+      : statusType === 'warn'
+      ? 'status-line status-line--warn'
+      : 'status-line'
 
   return (
     <div className="page">
-      <Header totalPrompts={vault.prompts.length} copiesToday={vault.copiesToday} />
+      <Header
+        totalPrompts={vault.prompts.length}
+        copiesToday={vault.copiesToday}
+        theme={theme}
+        onToggleTheme={toggleTheme}
+      />
 
       <div className="page-inner">
         {showPanel && (
@@ -93,14 +115,14 @@ export default function App() {
           />
         )}
 
-        <div className="controls-row" style={{ marginBottom: '24px' }}>
-          <SearchBar value={vault.query} onChange={vault.setQuery} />
+        <div className="controls-row">
+          <div className="controls-row__search">
+            <SearchBar value={vault.query} onChange={vault.setQuery} />
+          </div>
           {!showPanel && (
-            <div style={{ paddingTop: '24px' }}>
-              <button className="btn-primary" onClick={handleNewPrompt}>
-                [ + NEW PROMPT ▶ ]
-              </button>
-            </div>
+            <button className="btn-primary" onClick={handleNewPrompt}>
+              + New prompt
+            </button>
           )}
         </div>
 
@@ -108,7 +130,7 @@ export default function App() {
         <TagFilter tags={vault.allTags} activeTag={vault.activeTag} onSelect={vault.setActiveTag} />
 
         {statusMessage && (
-          <div key={statusMessage} className={statusClass} style={{ marginBottom: '16px' }}>
+          <div key={statusMessage} className={statusClass}>
             {statusMessage}
           </div>
         )}
@@ -120,7 +142,7 @@ export default function App() {
           onCopy={handleCopy}
         />
 
-        <hr className="divider divider--labeled" data-label="// VAULT TOOLS" style={{ marginTop: '48px' }} />
+        <hr className="divider" style={{ marginTop: '48px' }} />
 
         <ImportExportBar
           totalPrompts={vault.prompts.length}

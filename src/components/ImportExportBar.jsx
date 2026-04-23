@@ -13,11 +13,12 @@ export default function ImportExportBar({ onExport, onImport, totalPrompts }) {
 
   return (
     <div className="import-export-bar">
+      <span className="import-export-bar__label">Vault tools</span>
       <button className="btn-secondary" onClick={onExport} disabled={totalPrompts === 0}>
-        [ EXPORT JSON ]
+        Export JSON
       </button>
       <button className="btn-secondary" onClick={() => fileRef.current?.click()}>
-        [ IMPORT JSON ]
+        Import JSON
       </button>
       <input
         ref={fileRef}

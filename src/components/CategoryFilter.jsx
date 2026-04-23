@@ -9,7 +9,7 @@ export default function CategoryFilter({ active, onSelect }) {
           className={`category-tab${active === cat ? ' category-tab--active' : ''}`}
           onClick={() => onSelect(cat)}
         >
-          {cat}
+          {cat === 'ALL' ? 'All' : cat.charAt(0) + cat.slice(1).toLowerCase()}
         </button>
       ))}
     </nav>

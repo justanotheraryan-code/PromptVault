@@ -1,8 +1,11 @@
 import { useState, useRef } from 'react'
 
 function formatDate(iso) {
-  const d = new Date(iso)
-  return `${d.toISOString().slice(0, 10)} ${d.toTimeString().slice(0, 5)}`
+  return new Date(iso).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  })
 }
 
 export default function PromptCard({ prompt, onEdit, onDelete, onCopy }) {
@@ -52,16 +55,16 @@ export default function PromptCard({ prompt, onEdit, onDelete, onCopy }) {
             className={`btn-copy${copied ? ' btn-copy--copied' : ''}`}
             onClick={handleCopy}
           >
-            {copied ? '> COPIED' : '[ COPY ▶ ]'}
+            {copied ? 'Copied!' : 'Copy'}
           </button>
           <button className="btn-icon" onClick={() => onEdit(prompt)}>
-            [ EDIT ]
+            Edit
           </button>
           <button
             className={`btn-danger${deleteConfirm ? ' btn-danger--confirm' : ''}`}
             onClick={handleDeleteClick}
           >
-            {deleteConfirm ? '> CONFIRM?' : '[ DEL ]'}
+            {deleteConfirm ? 'Confirm?' : 'Delete'}
           </button>
         </div>
       </div>

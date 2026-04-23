@@ -1,22 +1,18 @@
 import { useState, useEffect, useRef } from 'react'
 
 const CATEGORIES = ['writing', 'code', 'strategy', 'analysis']
-
 const EMPTY_FORM = { title: '', body: '', category: 'writing', tags: [] }
 
 export default function AddEditPanel({ initialData, onSave, onCancel }) {
-  const [form, setForm] = useState(initialData ? {
-    title: initialData.title,
-    body: initialData.body,
-    category: initialData.category,
-    tags: [...initialData.tags],
-  } : { ...EMPTY_FORM })
+  const [form, setForm] = useState(
+    initialData
+      ? { title: initialData.title, body: initialData.body, category: initialData.category, tags: [...initialData.tags] }
+      : { ...EMPTY_FORM }
+  )
   const [tagInput, setTagInput] = useState('')
   const titleRef = useRef(null)
 
-  useEffect(() => {
-    titleRef.current?.focus()
-  }, [])
+  useEffect(() => { titleRef.current?.focus() }, [])
 
   const canSave = form.title.trim().length > 0 && form.body.trim().length > 0
 
@@ -51,17 +47,17 @@ export default function AddEditPanel({ initialData, onSave, onCancel }) {
   return (
     <div className="add-edit-panel">
       <div className="add-edit-panel__title">
-        {initialData ? '// EDIT PROMPT' : '// NEW PROMPT'}
+        {initialData ? 'Edit prompt' : 'New prompt'}
       </div>
       <form onSubmit={handleSubmit}>
         <div className="add-edit-panel__fields">
           <div className="field">
-            <label className="field-label">// PROMPT TITLE</label>
+            <label className="field-label">Title</label>
             <input
               ref={titleRef}
               type="text"
               className="input"
-              placeholder="refactor, summarize, explain..."
+              placeholder="Give this prompt a name…"
               value={form.title}
               onChange={(e) => handleField('title', e.target.value)}
               autoComplete="off"
@@ -70,10 +66,10 @@ export default function AddEditPanel({ initialData, onSave, onCancel }) {
           </div>
 
           <div className="field">
-            <label className="field-label">// BODY</label>
+            <label className="field-label">Prompt</label>
             <textarea
               className="textarea"
-              placeholder="be specific. vague is a lie you tell yourself."
+              placeholder="Write the full prompt here. Be specific — the more precise, the more reusable."
               value={form.body}
               onChange={(e) => handleField('body', e.target.value)}
               spellCheck={false}
@@ -82,7 +78,7 @@ export default function AddEditPanel({ initialData, onSave, onCancel }) {
 
           <div className="add-edit-panel__row">
             <div className="field">
-              <label className="field-label">// CATEGORY</label>
+              <label className="field-label">Category</label>
               <select
                 className="select"
                 value={form.category}
@@ -90,14 +86,16 @@ export default function AddEditPanel({ initialData, onSave, onCancel }) {
               >
                 {CATEGORIES.map((cat) => (
                   <option key={cat} value={cat}>
-                    {cat.toUpperCase()}
+                    {cat.charAt(0).toUpperCase() + cat.slice(1)}
                   </option>
                 ))}
               </select>
             </div>
 
             <div className="field">
-              <label className="field-label">// TAGS &nbsp;<span style={{ color: 'var(--text-dim)', textTransform: 'none', letterSpacing: 0 }}>(enter to add)</span></label>
+              <label className="field-label">
+                Tags <span className="tag-hint">(press Enter to add)</span>
+              </label>
               <div className="tag-input-row">
                 {form.tags.map((tag) => (
                   <span key={tag} className="tag-chip tag-chip--removable">
@@ -108,7 +106,7 @@ export default function AddEditPanel({ initialData, onSave, onCancel }) {
                 <input
                   type="text"
                   className="tag-input-row__input"
-                  placeholder={form.tags.length === 0 ? 'gpt, refactor, ux...' : ''}
+                  placeholder={form.tags.length === 0 ? 'gpt, refactor, ux…' : ''}
                   value={tagInput}
                   onChange={(e) => setTagInput(e.target.value)}
                   onKeyDown={handleTagKeyDown}
@@ -122,10 +120,10 @@ export default function AddEditPanel({ initialData, onSave, onCancel }) {
 
         <div className="add-edit-panel__actions">
           <button type="submit" className="btn-primary" disabled={!canSave}>
-            {initialData ? '[ UPDATE PROMPT ▶ ]' : '[ SAVE PROMPT ▶ ]'}
+            {initialData ? 'Update prompt' : 'Save prompt'}
           </button>
           <button type="button" className="btn-secondary" onClick={onCancel}>
-            [ CANCEL ]
+            Cancel
           </button>
         </div>
       </form>

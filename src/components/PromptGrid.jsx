@@ -5,8 +5,8 @@ export default function PromptGrid({ prompts, onEdit, onDelete, onCopy }) {
     return (
       <div className="prompt-grid">
         <div className="empty-state">
-          <div className="empty-state__line">&gt; NO PROMPTS FOUND.</div>
-          <div className="empty-state__line">// BUILD YOUR VAULT.</div>
+          <div className="empty-state__primary">No prompts found</div>
+          <div className="empty-state__secondary">Add your first prompt to get started</div>
         </div>
       </div>
     )

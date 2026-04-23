@@ -1,11 +1,10 @@
 export default function SearchBar({ value, onChange }) {
   return (
-    <div className="search-bar controls-row__search">
-      <label className="search-bar__label">// SEARCH VAULT</label>
+    <div className="search-bar">
       <input
         type="text"
         className="search-bar__input"
-        placeholder="search by title, body, or tag..."
+        placeholder="Search by title, body, or tag…"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         autoComplete="off"

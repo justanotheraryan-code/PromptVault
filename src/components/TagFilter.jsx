@@ -3,7 +3,7 @@ export default function TagFilter({ tags, activeTag, onSelect }) {
 
   return (
     <div className="tag-filter">
-      <span className="tag-filter__label">// TAGS</span>
+      <span className="tag-filter__label">Tags</span>
       {tags.map((tag) => (
         <button
           key={tag}

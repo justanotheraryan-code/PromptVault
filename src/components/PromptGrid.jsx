@@ -1,6 +1,6 @@
 import PromptCard from './PromptCard'
 
-export default function PromptGrid({ prompts, onEdit, onDelete, onCopy }) {
+export default function PromptGrid({ prompts, onEdit, onDelete, onCopy, onRate, currentAuthor }) {
   if (prompts.length === 0) {
     return (
       <div className="prompt-grid">
@@ -21,6 +21,8 @@ export default function PromptGrid({ prompts, onEdit, onDelete, onCopy }) {
           onEdit={onEdit}
           onDelete={onDelete}
           onCopy={onCopy}
+          onRate={onRate}
+          canEdit={prompt.author === currentAuthor}
         />
       ))}
     </div>

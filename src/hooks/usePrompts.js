@@ -1,37 +1,60 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
-
-const STORAGE_KEY = 'promptvault_prompts'
-
-function load() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    return raw ? JSON.parse(raw) : []
-  } catch {
-    return []
-  }
-}
-
-function persist(data) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
-}
+import { api } from '../lib/api'
 
 function todayKey() {
   return `promptvault_copies_${new Date().toISOString().slice(0, 10)}`
 }
 
-export function usePrompts() {
+export function usePrompts({ author, departmentId } = {}) {
   const [prompts, setPrompts] = useState([])
+  const [departments, setDepartments] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
   const [query, setQueryRaw] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
   const [category, setCategory] = useState('ALL')
   const [activeTag, setActiveTag] = useState(null)
+  const [scope, setScope] = useState('mine') // 'mine' | 'all'
   const [copiesToday, setCopiesToday] = useState(0)
   const debounceRef = useRef(null)
 
   useEffect(() => {
-    setPrompts(load())
     setCopiesToday(parseInt(localStorage.getItem(todayKey()) ?? '0', 10))
   }, [])
+
+  const refreshDepartments = useCallback(async () => {
+    try {
+      const list = await api.listDepartments()
+      setDepartments(list)
+    } catch (err) {
+      setError(err.message)
+    }
+  }, [])
+
+  const refreshPrompts = useCallback(async () => {
+    if (!author || !departmentId) {
+      setPrompts([])
+      return
+    }
+    setLoading(true)
+    try {
+      const list = await api.listPrompts(scope === 'mine' ? { department: departmentId } : {})
+      setPrompts(list)
+      setError(null)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }, [author, departmentId, scope])
+
+  useEffect(() => {
+    refreshDepartments()
+  }, [refreshDepartments])
+
+  useEffect(() => {
+    refreshPrompts()
+  }, [refreshPrompts])
 
   const setQuery = useCallback((q) => {
     setQueryRaw(q)
@@ -60,59 +83,47 @@ export function usePrompts() {
   }, [prompts])
 
   const addPrompt = useCallback(
-    (fields) => {
-      const now = new Date().toISOString()
-      const next = [
-        {
-          id: crypto.randomUUID(),
-          title: fields.title.trim(),
-          body: fields.body.trim(),
-          category: fields.category,
-          tags: fields.tags,
-          createdAt: now,
-          updatedAt: now,
-          useCount: 0,
-        },
-        ...prompts,
-      ]
-      setPrompts(next)
-      persist(next)
+    async (fields) => {
+      const created = await api.createPrompt({
+        ...fields,
+        department: departmentId,
+        author,
+      })
+      setPrompts((prev) => [created, ...prev])
+      refreshDepartments()
+      return created
     },
-    [prompts]
+    [author, departmentId, refreshDepartments]
   )
 
-  const updatePrompt = useCallback(
-    (id, fields) => {
-      const next = prompts.map((p) =>
-        p.id === id ? { ...p, ...fields, updatedAt: new Date().toISOString() } : p
-      )
-      setPrompts(next)
-      persist(next)
-    },
-    [prompts]
-  )
+  const updatePrompt = useCallback(async (id, fields) => {
+    const updated = await api.updatePrompt(id, fields)
+    setPrompts((prev) => prev.map((p) => (p.id === id ? updated : p)))
+    return updated
+  }, [])
 
   const deletePrompt = useCallback(
-    (id) => {
-      const next = prompts.filter((p) => p.id !== id)
-      setPrompts(next)
-      persist(next)
+    async (id) => {
+      await api.deletePrompt(id)
+      setPrompts((prev) => prev.filter((p) => p.id !== id))
+      refreshDepartments()
     },
-    [prompts]
+    [refreshDepartments]
   )
 
   const incrementUseCount = useCallback(
-    (id) => {
-      const prompt = prompts.find((p) => p.id === id)
-      if (!prompt) return
-      const next = prompts.map((p) =>
-        p.id === id ? { ...p, useCount: (p.useCount ?? 0) + 1, updatedAt: new Date().toISOString() } : p
-      )
-      setPrompts(next)
-      persist(next)
+    async (id) => {
+      if (!author || !departmentId) return
+      const updated = await api.recordUse(id, { author, department: departmentId })
+      setPrompts((prev) => prev.map((p) => (p.id === id ? updated : p)))
     },
-    [prompts]
+    [author, departmentId]
   )
+
+  const ratePrompt = useCallback(async (id, score) => {
+    const updated = await api.ratePrompt(id, score)
+    setPrompts((prev) => prev.map((p) => (p.id === id ? updated : p)))
+  }, [])
 
   const recordCopyToday = useCallback(() => {
     const key = todayKey()
@@ -122,9 +133,30 @@ export function usePrompts() {
     setCopiesToday(next)
   }, [])
 
+  const createDepartment = useCallback(
+    async (name) => {
+      const dept = await api.createDepartment(name)
+      await refreshDepartments()
+      return dept
+    },
+    [refreshDepartments]
+  )
+
   const exportJSON = useCallback(() => {
     const date = new Date().toISOString().slice(0, 10)
-    const blob = new Blob([JSON.stringify(prompts, null, 2)], { type: 'application/json' })
+    const payload = prompts.map((p) => ({
+      id: p.id,
+      title: p.title,
+      body: p.body,
+      category: p.category,
+      tags: p.tags,
+      author: p.author,
+      qualityScore: p.qualityScore,
+      useCount: p.useCount,
+      createdAt: p.createdAt,
+      updatedAt: p.updatedAt,
+    }))
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
@@ -137,42 +169,49 @@ export function usePrompts() {
     (file) => {
       return new Promise((resolve) => {
         const reader = new FileReader()
-        reader.onload = (e) => {
+        reader.onload = async (e) => {
           try {
             const imported = JSON.parse(e.target.result)
             if (!Array.isArray(imported)) throw new Error('invalid format')
-            const existingIds = new Set(prompts.map((p) => p.id))
-            const toAdd = imported.filter((p) => p.id && !existingIds.has(p.id))
-            const next = [...toAdd, ...prompts]
-            setPrompts(next)
-            persist(next)
-            resolve({ success: true, added: toAdd.length })
-          } catch {
-            resolve({ success: false, error: 'invalid file' })
+            const result = await api.importPrompts(imported, { author, department: departmentId })
+            await refreshPrompts()
+            await refreshDepartments()
+            resolve({ success: true, added: result.added })
+          } catch (err) {
+            resolve({ success: false, error: err.message })
           }
         }
         reader.readAsText(file)
       })
     },
-    [prompts]
+    [author, departmentId, refreshPrompts, refreshDepartments]
   )
 
   return {
     prompts,
     filteredPrompts,
+    departments,
     allTags,
+    loading,
+    error,
     copiesToday,
     query,
     category,
     activeTag,
+    scope,
     setQuery,
     setCategory,
     setActiveTag,
+    setScope,
     addPrompt,
     updatePrompt,
     deletePrompt,
     incrementUseCount,
+    ratePrompt,
     recordCopyToday,
+    createDepartment,
+    refreshPrompts,
+    refreshDepartments,
     exportJSON,
     importJSON,
   }
